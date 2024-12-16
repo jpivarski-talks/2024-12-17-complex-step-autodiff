@@ -60,14 +60,14 @@
 \large
 \vspace{0.5 cm}
 \begin{itemize}\setlength{\itemsep}{0.5 cm}
-\item \mintinline{python}{"cpu"}: buffers (user data, indexes, offsets, etc.) are NumPy arrays, computations are performed by NumPy functions or cpu-kernels.so
-\item \mintinline{python}{"cuda"}: buffers are CuPy arrays, CUDA kernels are JIT-compiled by CuPy
-\item \mintinline{python}{"typetracer"}: buffers are dataless Python objects that only infer types (intended for Dask; currently only used by Dask)
-\item \mintinline{python}{"jax"}: data buffers are JAX arrays, indexes are NumPy, \mintinline{python}{ak.Array} is flattened/unflattened as PyTrees
+\item<1-> \mintinline{python}{"cpu"}: buffers (user data, indexes, offsets, etc.) are NumPy arrays, computations are performed by NumPy functions or cpu-kernels.so
+\item<2-> \mintinline{python}{"cuda"}: buffers are CuPy arrays, CUDA kernels are JIT-compiled by CuPy
+\item<3-> \mintinline{python}{"typetracer"}: buffers are dataless Python objects that only infer types (intended for Dask; currently only used by Dask)
+\item<4-> \mintinline{python}{"jax"}: data buffers are JAX arrays, indexes are NumPy, \mintinline{python}{ak.Array} is flattened/unflattened as PyTrees
 \end{itemize}
 
 \vspace{0.5 cm}
-When a backend is untested, it gets out of date. \mintinline{python}{"jax"} has 44 tests. (\mintinline{python}{"cuda"} has 459 tests and \mintinline{python}{"cpu"} + \mintinline{python}{"typetracer"} has 2214 tests and are used daily.)
+\uncover<5->{When a backend is untested, it gets out of date. \mintinline{python}{"jax"} has 44 tests. (\mintinline{python}{"cuda"} has 459 tests and \mintinline{python}{"cpu"} + \mintinline{python}{"typetracer"} has 2214 tests and are used daily.)}
 \end{frame}
 
 \begin{frame}{JAX backend development}
@@ -80,20 +80,31 @@ When a backend is untested, it gets out of date. \mintinline{python}{"jax"} has 
 
 \begin{uncoverenv}<2->
 \begin{itemize}\setlength{\itemsep}{0.25 cm}
-\item Jan 2021--Apr 2021: Anish Biswas as IRIS-HEP Fellow
+\item<2-> Jan 2021--Apr 2021: Anish Biswas as IRIS-HEP Fellow
 \begin{itemize}
 \item wasn't possible at all, motivated Awkward v2 C++ $\to$ Python reimplementation
 \end{itemize}
-\item Jan 2022--Jun 2022: Anish Biswas as CERN Contractor
+\item<3-> Jan 2022--Jun 2022: Anish Biswas as CERN Contractor
 \begin{itemize}
 \item implemented map-like functions in PyTrees, reduce-like functions with LAX
 \end{itemize}
-\item Jan 2024--Sep 2024: Saransh Chopra as IRIS-HEP Gap Year Fellow
+\item<4-> Jan 2024--Sep 2024: Saransh Chopra as IRIS-HEP Gap Year Fellow
 \begin{itemize}
 \item ``on call'' for feedback from autograd users; received very little
 \end{itemize}
 \end{itemize}
 \end{uncoverenv}
+\end{frame}
+
+\begin{frame}{Limitations on the JAX backend}
+\large
+\vspace{0.5 cm}
+\begin{itemize}\setlength{\itemsep}{0.5 cm}
+\item<1-> JAX's JIT-compilation is a non-starter: XLA requires array sizes to not be dependent on data values at compile-time, and that rule is broken throughout Awkward's codebase.
+\item<2-> JAX's PyTree extension mechanism exclusively works on map-like operations: $f(\vec{x}) = f(x_i)$ for all components $x_i$ of array $\vec{x}$.
+\item<3-> We were lucky enough that JAX's LAX library has segmented reductions.
+\item<4-> I'm not completely sure all of the above works: Anish was fighting corner cases to the end and we don't have much user feedback.
+\end{itemize}
 \end{frame}
 
 \begin{frame}{Occasionally, the JAX tests fail and are patched}
@@ -105,6 +116,17 @@ When a backend is untested, it gets out of date. \mintinline{python}{"jax"} has 
 \column{0.5\linewidth}
 \includegraphics[width=\linewidth]{jax-failures-2.png}
 \end{columns}
+\end{frame}
+
+\begin{frame}{Can we get autodiff without JAX?}
+\large
+\vspace{0.5 cm}
+\begin{itemize}\setlength{\itemsep}{0.5 cm}
+\item<1-> HIPS/autograd is a simpler library; Awkward v1's PR \#120 wraps \mintinline{python}{elementwise_grad} (forward autodiff of mappers as a dectorator).
+\item<2-> If forward autodiff is acceptable, a backend based on an eager primal + tangent array would let us control program flow and get 100\% coverage.
+\item<3-> If backpropagation is necessary, we could at least get dask-awkward's coverage by using our own typetracer or Dask DAGs.
+\item<4-> How hard is it to implement autodiff, anyway?
+\end{itemize}
 \end{frame}
 
 
