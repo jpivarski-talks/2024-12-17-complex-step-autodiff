@@ -56,9 +56,58 @@
 
 % START START START START START START START START START START START START START
 
-\begin{frame}{First slide}
+\begin{frame}{Awkward Array has 4 backends}
+\large
 \vspace{0.5 cm}
-HERE
+\begin{itemize}\setlength{\itemsep}{0.5 cm}
+\item \mintinline{python}{"cpu"}: buffers (user data, indexes, offsets, etc.) are NumPy arrays, computations are performed by NumPy functions or cpu-kernels.so
+\item \mintinline{python}{"cuda"}: buffers are CuPy arrays, CUDA kernels are JIT-compiled by CuPy
+\item \mintinline{python}{"typetracer"}: buffers are dataless Python objects that only infer types (intended for Dask; currently only used by Dask)
+\item \mintinline{python}{"jax"}: data buffers are JAX arrays, indexes are NumPy, \mintinline{python}{ak.Array} is flattened/unflattened as PyTrees
+\end{itemize}
+
+\vspace{0.5 cm}
+When a backend is untested, it gets out of date. \mintinline{python}{"jax"} has 44 tests. (\mintinline{python}{"cuda"} has 459 tests and \mintinline{python}{"cpu"} + \mintinline{python}{"typetracer"} has 2214 tests and are used daily.)
 \end{frame}
+
+\begin{frame}{JAX backend development}
+\large
+\vspace{0.5 cm}
+\begin{columns}
+\column{1.1\linewidth}
+\only<1>{\includegraphics[width=\linewidth]{awkward-uproot-timeline.pdf}}\only<2->{\includegraphics[width=\linewidth]{awkward-uproot-timeline-jax.pdf}}
+\end{columns}
+
+\begin{uncoverenv}<2->
+\begin{itemize}\setlength{\itemsep}{0.25 cm}
+\item Jan 2021--Apr 2021: Anish Biswas as IRIS-HEP Fellow
+\begin{itemize}
+\item wasn't possible at all, motivated Awkward v2 C++ $\to$ Python reimplementation
+\end{itemize}
+\item Jan 2022--Jun 2022: Anish Biswas as CERN Contractor
+\begin{itemize}
+\item implemented map-like functions in PyTrees, reduce-like functions with LAX
+\end{itemize}
+\item Jan 2024--Sep 2024: Saransh Chopra as IRIS-HEP Gap Year Fellow
+\begin{itemize}
+\item ``on call'' for feedback from autograd users; received very little
+\end{itemize}
+\end{itemize}
+\end{uncoverenv}
+\end{frame}
+
+\begin{frame}{Occasionally, the JAX tests fail and are patched}
+\vspace{0.25 cm}
+\begin{columns}
+\column{0.55\linewidth}
+\includegraphics[width=\linewidth]{jax-failures.png}
+
+\column{0.5\linewidth}
+\includegraphics[width=\linewidth]{jax-failures-2.png}
+\end{columns}
+\end{frame}
+
+
+
 
 \end{document}
