@@ -129,7 +129,155 @@
 \end{itemize}
 \end{frame}
 
+%% \begin{frame}{Theory of autodiff: complex numbers}
+%% \vspace{0.25 cm}
+%% {\scriptsize \textcolor{blue}{\url{https://www.hedonisticlearning.com/posts/complex-step-differentiation.html}}}
 
+%% \vspace{0.3 cm}
+%% Given an infinitely differentiable function $f : \Bbb{R} \to \Bbb{R}$, consider a complex extension $F : \Bbb{C} \to \Bbb{C}$ with $F(x) = f(x)$ for $x \in \Bbb{R}$. ($F$ is ``holomorphic'' or ``complex analytic.'')
+
+%% \vspace{0.3 cm}
+%% \begin{uncoverenv}<2->
+%% Using midpoint rule integration in a circle of radius $h > 0$ around $x$ at 2 points:
+
+%% \[ F'(x) \approx \frac{1}{2hi} \bigg[F(x + hi) - F(x - hi) \bigg] \]
+%% \end{uncoverenv}
+
+%% \begin{uncoverenv}<3->
+%% Since $F(\overline{z}) = \overline{F(z)}$, the expression in brackets is $2i\,\mbox{Im}\big(f(x + hi)\big)$ and
+
+%% \[ F'(x) \approx \mbox{Im} \bigg( F(x + hi) \bigg) / h \]
+%% \end{uncoverenv}
+
+%% \uncover<4->{(Unlike the finite difference method, there's no subtraction of real values.)}
+%% \end{frame}
+
+%% \begin{frame}{Theory of autodiff: what JAX and other libraries do}
+%% The equation for complex-valued $F$
+
+%% \[ F'(x) \approx \mbox{Im} \bigg( F(x + hi) \bigg) / h \]
+
+%% becomes exact if $h > 0$ and $h^2 = 0$. There's an algebraic ring with this property called ``dual numbers,'' which 
+
+%% \end{frame}
+
+\begin{frame}{Theory of autodiff: complex numbers}
+\vspace{0.3 cm}
+{\scriptsize \textcolor{blue}{\url{https://www.hedonisticlearning.com/posts/complex-step-differentiation.html}}}
+
+{\scriptsize \textcolor{blue}{\url{https://researchrepository.wvu.edu/faculty_publications/426}}}
+
+\vspace{0.3 cm}
+Calculating a derivative of $f : \Bbb{R} \to \Bbb{R}$ by finite differences:
+
+\[ f'(x) \approx \frac{1}{2h} \bigg( f(x + h) - f(x - h) \bigg) \]
+
+but too-small $h$ has large cancellations and too-large $h$ steps over features of $f$.
+
+\vspace{0.3 cm}
+\begin{uncoverenv}<2->
+Instead, take a step $h = i\varepsilon$ on a function $F(z) = f(z)$ for $z \in \Bbb{R}$ with $F(\overline{z}) = \overline{F(z)}$:
+
+\[ F'(x) \approx \frac{1}{2\varepsilon} \bigg( F(x + i\varepsilon) - F(x - i\varepsilon) \bigg) = \frac{1}{\varepsilon} \mbox{Im}\bigg( F(x + i\varepsilon) \bigg) \]
+\end{uncoverenv}
+
+\vspace{0.3 cm}
+\uncover<3->{No more additive cancellations and the step is perpendicular to features of $f$.}
+\end{frame}
+
+\begin{frame}{Theory of autodiff: dual numbers}
+\vspace{0.3 cm}
+The derivative of $f$ from its complex extension $F$,
+
+\[ f'(x) \approx \mbox{Im}\bigg( F(x + i\varepsilon) \bigg) / \varepsilon \]
+
+is exact if $\varepsilon > 0$ and $\varepsilon^2 = 0$. The complex numbers don't have this property, but imagine an abstract algebra in which this is true.
+
+\vspace{0.3 cm}
+\uncover<2->{This algebra is called ``dual numbers,'' and it's the space-time extension used in SUSY. The Taylor expansion of a quantum field in superspace has exactly 2 terms, identified as a fermion field and a boson field.}
+
+\vspace{0.3 cm}
+\uncover<3->{For autodiff, the two components are the primal array and tangent array. Implementing autodiff is as hard as implementing complex extensions for every real function.}
+
+\vspace{0.3 cm}
+\uncover<4->{But if we already have a complex implementation of all of our functions, we can set $\varepsilon = 10^{-8}$ to get $10^{-16}$ errors (typical errors in double-precision floating-point).}
+\end{frame}
+
+\begin{frame}[fragile]{A complete autodiff library on one slide}
+\vspace{0.1 cm}
+\tiny
+\begin{columns}
+\column{0.55\linewidth}
+\begin{minted}{python}
+import numpy as np
+from numpy.lib.mixins import NDArrayOperatorsMixin
+
+class diffarray(NDArrayOperatorsMixin):
+    @classmethod
+    def _build(cls, complex_array):
+        self = cls.__new__(cls)
+        self._array = complex_array
+        return self
+
+    def __init__(self, primal, tangent=None):
+        if issubclass(primal.dtype, np.float32):
+            self._array = primal.astype(np.complex64)
+            self._step_scale = 1e-4
+        elif issubclass(primal.dtype, np.float64):
+            self._array = primal.astype(np.complex128)
+            self._step_scale = 1e-8
+        else:
+            raise TypeError("array must be float32 or float64")
+        if tangent is None:
+            self._array += 1j * self._step_scale
+        else:
+            self._array += tangent * 1j * self._step_scale
+
+    @property
+    def primal(self):
+        return np.real(self._array)
+
+    @property
+    def tangent(self):
+        return np.imag(self._array) / self._step_scale
+\end{minted}
+
+\column{0.55\linewidth}
+\begin{minted}{python}
+def __array_function__(self, func, types, args, kwargs):
+    # override functions that would be misinterpreted
+    if func.__name__ == "abs":
+        out = args[0].copy()
+        out[out.real < 0] *= -1
+        return type(self)._build(out)
+    if func.__name__ == "real":
+        return type(self)._build(args[0]._array)
+    if func.__name__ == "imag":
+        return type(self)._build(args[0]._array * 0)
+    if func.__name__ in ("less", "less_equal", "equal",
+                   "not_equal", "greater", "greater_equal"):
+        args = [getattr(x, "_array", x).real for x in args]
+        return func(*args, **kwargs)
+
+    # handle all other functions
+    args = [getattr(x, "_array", x) for x in args]
+    kwargs = {
+        k: getattr(v, "_array", v) for k, v in kwargs.items()
+    }
+    out = func(*args, **kwargs)
+    if issubclass(out.dtype.type, np.complexfloating):
+        return type(self)._build(out)
+    else:
+        return out
+
+def __getitem__(self, where):
+    out = self._array[where]
+    if isinstance(out, np.complexfloating):
+        return type(self)._build(np.asarray(out))
+    return out
+\end{minted}
+\end{columns}
+\end{frame}
 
 
 \end{document}
