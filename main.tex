@@ -107,7 +107,7 @@
 \end{itemize}
 \end{frame}
 
-\begin{frame}{Occasionally, the JAX tests fail and are patched}
+\begin{frame}{Occasionally, the JAX tests fail and have to be patched}
 \vspace{0.25 cm}
 \begin{columns}
 \column{0.55\linewidth}
@@ -178,7 +178,7 @@ but too-small $h$ has large cancellations and too-large $h$ steps over bumps in 
 \begin{uncoverenv}<2->
 Instead, take a step $h = i\varepsilon$ on a function $F(z) = f(z)$ for $z \in \Bbb{R}$ with $F(\overline{z}) = \overline{F(z)}$:
 
-\[ F'(x) \approx \frac{1}{2\varepsilon} \bigg( F(x + i\varepsilon) - F(x - i\varepsilon) \bigg) = \frac{1}{\varepsilon} \mbox{Im}\bigg( F(x + i\varepsilon) \bigg) \]
+\[ F'(x) \approx \frac{1}{2i\varepsilon} \bigg( F(x + i\varepsilon) - F(x - i\varepsilon) \bigg) = \frac{1}{\varepsilon} \mbox{Im}\bigg( F(x + i\varepsilon) \bigg) \]
 \end{uncoverenv}
 
 \vspace{0.3 cm}
